@@ -41,20 +41,22 @@ writeln = putStrLn
 main = do
   writeln ""
   writeln "composition leftUnit"
-  quickCheck testLeftUnit
+--  quickCheck testLeftUnit
   writeln "composition rightUnit"
-  quickCheck testRightUnit
+--  quickCheck testRightUnit
   writeln "composition associativity"
-  quickCheckWith stdArgs {maxSuccess = 1000} testCompAssoc
+--  quickCheckWith stdArgs {maxSuccess = 1000} testCompAssoc
   writeln "vector associativity"
-  quickCheckWith stdArgs {maxSuccess = 1000} testVecAssoc
+--  quickCheckWith stdArgs {maxSuccess = 1000} testVecAssoc
   writeln "------------------------"
   writeln "Compose translations"
-  quickCheck testCompTrans
+--  quickCheck testCompTrans
   writeln "Compose rotations"
-  quickCheck testCompRot
+--  quickCheck testCompRot
   writeln "Rotation associativity"
-  quickCheck testAssRot
+--  quickCheck testAssRot
+  writeln "FC2"
+  quickCheck testFullCircleRot2
   writeln "Full circle rot"
   quickCheck testFullCircleRot
   writeln "------------------------"

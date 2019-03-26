@@ -102,11 +102,14 @@ fullCircle = 360
 
 
 sinn :: R -> R
-sinn x = (4 * x * (180 - x)) / (40500 - x * (180 - x))
+sinn x
+  | x < 0 = -sinn(-x)
+  | x >= 0 && x < 180 = (4 * x * (180 - x)) / (40500 - x * (180 - x))
+  | x >= 180 && x < 360 = -sinn(x - 180)
+  | otherwise = sinn(x - 360)
 
 coss :: R -> R
-coss x = sinn (90 - x)
-
+coss x = sinn(90 + x)
 
 
 instance Mon Transform where 
@@ -125,6 +128,7 @@ trpoint (Translate v@(V x y)) p@(P x1 y1) = P (x + x1) (y + y1)
 trpoint (Rotate r) p@(P x1 y1) = rot r p
 trpoint (Compose v@(V x y) r) p@(P x1 y1) = rot r (P (x + x1) (y + y1))
 
+
 trvec :: Transform -> Vec -> Vec
 trvec (Translate v@(V x y)) v1@(V x1 y1) = V (x + x1) (y + y1)
 trvec (Rotate r) v@(V x1 y1) = new_vector where
@@ -133,6 +137,7 @@ trvec (Rotate r) v@(V x1 y1) = new_vector where
 trvec (Compose v@(V x y) r) v1@(V x1 y1) = new_vector where
   rotated_point@(P x2 y2) = rot r (P (x + x1) (y + y1))
   new_vector = V x2 y2
+
 
 transform :: Transform -> Picture -> Picture
 transform t (PP x) = PP (foldr f [] x) where
