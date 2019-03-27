@@ -64,8 +64,14 @@ renderScaled c (PP p) = foldr f [] p where
     ((round $ (fromIntegral c)*x1), (round $ (fromIntegral c)*y1))):acc
 
 
-data Transform = Translate Vec | Rotate R | Compose Vec R
+type TranFun = Point -> Point 
 
+blank :: TranFun
+blank = id
+
+data Transform = T TranFun | I blank
+
+-- data Transform = Id | Rotate R Transform | Translate Vec Transform
 
 instance Eq Transform where
   Translate v1 == Translate v2 = v1 == v2
@@ -82,7 +88,7 @@ instance Show Transform where
 
 -- przesunięcie o wektor
 translate :: Vec -> Transform
-translate v = Translate v
+translate v = v
 
 
 -- obrót wokół punktu (0,0) przeciwnie do ruchu wskazówek zegara
@@ -116,9 +122,10 @@ instance Mon Transform where
   m1 = Translate (V 0 0)
   (><) (Translate (V x y)) (Translate (V x1 y1)) = Translate (V (x + x1) (y + y1))
   (><) (Rotate r) (Rotate r1) = Rotate (r + r1)
-  (><) (Translate v) (Rotate r) = Compose v r
-  (><) (Compose (V x y) r) (Translate (V x1 y1)) = Compose (V (x + x1) (y + y1)) r
-  (><) (Compose v r) (Rotate r1) = Compose v (r + r1)
+  (><) (Translate v) rot@(Rotate r) = Compose v r
+  (><) rot@(Rotate r) (Translate v) = Compose v r
+  (><) (Translate (V x1 y1)) (Compose (V x y) r) = Compose (V (x + x1) (y + y1)) r
+  (><) rot@(Rotate r1) (Compose v r) = Compose (trvec rot v) (r + r1)
   (><) (Compose (V x y) r) (Compose (V x1 y1) r1) = Compose (V (x + x1) (y + y1)) (r + r1)
   (><) x y = (><) y x
   
@@ -126,17 +133,17 @@ instance Mon Transform where
 trpoint :: Transform -> Point -> Point
 trpoint (Translate v@(V x y)) p@(P x1 y1) = P (x + x1) (y + y1)
 trpoint (Rotate r) p@(P x1 y1) = rot r p
-trpoint (Compose v@(V x y) r) p@(P x1 y1) = rot r (P (x + x1) (y + y1))
+trpoint (Compose v@(V x y) r) p@(P x1 y1) = trpoint (Translate v) (rot r p)
 
 
 trvec :: Transform -> Vec -> Vec
-trvec (Translate v@(V x y)) v1@(V x1 y1) = V (x + x1) (y + y1)
+trvec (Translate _) v = v
 trvec (Rotate r) v@(V x1 y1) = new_vector where
   rotated_point@(P x2 y2) = rot r (P x1 y1)
   new_vector = V x2 y2
-trvec (Compose v@(V x y) r) v1@(V x1 y1) = new_vector where
-  rotated_point@(P x2 y2) = rot r (P (x + x1) (y + y1))
-  new_vector = V x2 y2
+trvec (Compose _ r) v1@(V x y) = new_vector where
+  rotated_point@(P x1 y1) = rot r (P (x) (y))
+  new_vector = V x1 y1
 
 
 transform :: Transform -> Picture -> Picture

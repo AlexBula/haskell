@@ -20,10 +20,14 @@ data MyState = S {
   path_length :: Int
 }
 
+initialState :: MyState
+initialState = S [] Nothing Nothing [] (Translate (V 0 0)) 0
+
 type ParseM a = ErrorT String(StateT MyState Identity) a
 
 runParseM :: MyState -> ParseM a -> (Either String a, MyState)
-runParseM st ev = runIdentity (runStateT (runErrorT ev) st)
+runParseM st ev = runIdentity (runStateT (runErrorT ev) st) 
+
 
 addM :: ParseM ()
 addM = do
@@ -78,13 +82,13 @@ lineToM = do
   x <- pop
   modify (drawLine x y)
 
--- closePathM :: ParseM()
--- closePathM = do
---   state <- Control.Monad.State.get
---   if (path_length state) >= 2 then
---     let Just (P x y) = base_point state in modify (drawLine x y)
---   else 
---     return
+closePathM :: ParseM()
+closePathM = do
+  state <- Control.Monad.State.get
+  if (path_length state) >= 2 then
+    let Just (P x y) = base_point state in modify (drawLine x y)
+  else 
+    return ()
 
 addTransformation :: Transform -> MyState -> MyState
 addTransformation t state = state {transformation = new_trans} where
@@ -126,30 +130,30 @@ pop = do
       return $ val
 
 
--- parseInput :: [String] -> ParseM()
--- parseInput (x:xs) = do
---   v <- readMaybe x :: Maybe R
---   if v == Nothing then
---     case x of
---       "add" -> addM
---       "sub" -> subM
---       "mul" -> mulM
---       "div" -> divM
---       "moveto" -> moveToM
---       "lineto" -> lineToM
---       "closepath" -> closePathM
---       "translate" -> translateM
---       "rotate" -> rotateM
---       _ -> throwError "/Courier findfont 24 scalefont setfont 0 0 moveto (Error) show"
---   else
---     push v
+parseInput :: [String] -> ParseM()
+parseInput (x:xs) = do
+  let v = readMaybe x :: Maybe Int
+  if v == Nothing then
+    case x of
+      "add" -> addM
+      "sub" -> subM
+      "mul" -> mulM
+      "div" -> divM
+      "moveto" -> moveToM
+      "lineto" -> lineToM
+      "closepath" -> closePathM
+      "translate" -> translateM
+      "rotate" -> rotateM
+      _ -> throwError "/Courier findfont 24 scalefont setfont 0 0 moveto (Error) show"
+  else
+    push $ toRational $ fromJust v
+  parseInput xs
+parseInput [] = return () 
 
 
-parse :: Picture
-parse = PP [((P 0 0), (P 2 2)), ((P 2 2), (P 4 4))]
+printError :: String
+printError = "300 400 translate\n\n/Courier findfont 24 scalefont setfont 0 0 moveto (Error) show\n\nstroke showpage\n"
 
-runParser :: Maybe Int -> [IntLine]
-runParser (Just scalar) = renderScaled scalar parse
 
 drawPicture :: [IntLine] -> String
 drawPicture x = "300 400 translate\n\n" ++ foldr f "" x ++ "\nstroke showpage\n" where 
@@ -157,12 +161,18 @@ drawPicture x = "300 400 translate\n\n" ++ foldr f "" x ++ "\nstroke showpage\n"
 
 main = do
     args <- System.Environment.getArgs
-    if args == [] then
-      putStr $ drawPicture $ runParser $ Just 1
-    else
-      let scalar = readMaybe (head args) :: Maybe Int in
-        if scalar == Nothing || length args /= 1 then
-          putStr "Error. Usage: runhaskell Main.hs scalar_int(optional)\n"
+    handle <- getContents
+    let (err, state) = runParseM initialState (parseInput (words handle))
+    case err of
+      (Left s) -> putStr printError
+      (Right _) -> do
+        let pic = picture state
+        if args == [] then
+          putStr $ drawPicture $ renderScaled 1 (PP pic)
         else
-          putStr $ drawPicture $ runParser $ scalar
+          let scalar = readMaybe (head args) :: Maybe Int in
+          if scalar == Nothing || length args /= 1 then
+            putStr "Error. Usage: runhaskell Main.hs scalar_int(optional)\n"
+          else
+            putStr $ drawPicture $ renderScaled (fromJust scalar) (PP pic)
     
