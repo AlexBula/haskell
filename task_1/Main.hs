@@ -5,6 +5,8 @@ import Text.Read
 import Control.Monad.Identity
 import Control.Monad.State
 import Control.Monad.Error
+import Control.Monad(liftM)
+import Data.Maybe(fromJust)
 import Lib
 import Mon
 
@@ -13,7 +15,7 @@ data MyState = S {
   stack :: [R], 
   base_point :: Maybe Point,
   current_point :: Maybe Point,
-  picture :: Picture, 
+  picture :: [(Point, Point)], 
   transformation :: Transform,
   path_length :: Int
 }
@@ -23,26 +25,26 @@ type ParseM a = ErrorT String(StateT MyState Identity) a
 runParseM :: MyState -> ParseM a -> (Either String a, MyState)
 runParseM st ev = runIdentity (runStateT (runErrorT ev) st)
 
-add :: ParseM ()
-add = do
+addM :: ParseM ()
+addM = do
   y <- pop
   x <- pop
   push (x + y)
 
-sub :: ParseM()
-sub = do
+subM :: ParseM()
+subM = do
   y <- pop
   x <- pop
   push (x - y)
 
-mul :: ParseM()
-mul = do
+mulM :: ParseM()
+mulM = do
   y <- pop
   x <- pop
   push (x * y)
 
-div :: ParseM()
-div = do
+divM :: ParseM()
+divM = do
   y <- pop
   x <- pop
   if y == 0 then
@@ -50,8 +52,8 @@ div = do
   else
     push (x / y)
 
-moveTo :: ParseM()
-moveTo = do
+moveToM :: ParseM()
+moveToM = do
   y <- pop
   x <- pop
   modify(f x y) where
@@ -61,41 +63,41 @@ moveTo = do
       trans = transformation state
 
 drawLine :: R -> R -> MyState -> MyState
-drawLine x y state = state {picture = PP (new_line:pic), 
+drawLine x y state = state {picture = (new_line:pic), 
                             current_point = Just new_point,
                             path_length = incremented} where
   pic = picture state
   trans = transformation state
   new_point = trpoint trans (P x y)
-  new_line =  (Just (current_point state), new_point)
+  new_line = (fromJust (current_point state), new_point)
   incremented = (path_length state) + 1
 
-lineTo :: ParseM()
-lineTo = do
+lineToM :: ParseM()
+lineToM = do
   y <- pop
   x <- pop
   modify (drawLine x y)
 
-closePath :: ParseM()
-closePath = do
-  state <- Control.Monad.State.get
-  if (path_length state) >= 2 then
-    let Just (P x y) = base_point state in modify (drawLine x y)
-  else 
-    return
+-- closePathM :: ParseM()
+-- closePathM = do
+--   state <- Control.Monad.State.get
+--   if (path_length state) >= 2 then
+--     let Just (P x y) = base_point state in modify (drawLine x y)
+--   else 
+--     return
 
 addTransformation :: Transform -> MyState -> MyState
 addTransformation t state = state {transformation = new_trans} where
     new_trans = (><) t (transformation state)
 
-translate :: ParseM()
-translate = do
+translateM :: ParseM()
+translateM = do
   y <- pop
   x <- pop
   modify(addTransformation $ Translate (V x y))
 
-rotate :: ParseM()
-rotate = do
+rotateM :: ParseM()
+rotateM = do
   x <- pop
   modify(addTransformation $ Rotate x)
 
@@ -124,14 +126,23 @@ pop = do
       return $ val
 
 
-parseInput :: [String] -> ParseM()
-parseInput (x:xs) = do
-  v <- readMaybe x :: Maybe R
-  if v /= Nothing then
-    push v
-  else
-    case x 
-    
+-- parseInput :: [String] -> ParseM()
+-- parseInput (x:xs) = do
+--   v <- readMaybe x :: Maybe R
+--   if v == Nothing then
+--     case x of
+--       "add" -> addM
+--       "sub" -> subM
+--       "mul" -> mulM
+--       "div" -> divM
+--       "moveto" -> moveToM
+--       "lineto" -> lineToM
+--       "closepath" -> closePathM
+--       "translate" -> translateM
+--       "rotate" -> rotateM
+--       _ -> throwError "/Courier findfont 24 scalefont setfont 0 0 moveto (Error) show"
+--   else
+--     push v
 
 
 parse :: Picture
