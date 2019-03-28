@@ -64,32 +64,43 @@ renderScaled c (PP p) = foldr f [] p where
     ((round $ (fromIntegral c)*x1), (round $ (fromIntegral c)*y1))):acc
 
 
-type TranFun = Point -> Point 
+-- type TranFun = Point -> Point 
 
-blank :: TranFun
-blank = id
+-- blank :: TranFun
+-- blank = id
 
-data Transform = T TranFun
+-- data Transform = T TranFun
 
--- data Transform = Id | Rotate R Transform | Translate Vec Transform
+data TransformHelper = Rotate R | Translate Vec
+data Transform = T [TransformHelper]
 
--- instance Eq Transform where
-  -- t1 == t2 
+instance Eq TransformHelper where
+  (Rotate r) == (Rotate r1) = r == r1
+  (Translate (V x y)) == (Translate (V x1 y1)) = x == x1 && y == y1
+  _ == _ = False
+
+instance Show TransformHelper where
+  show (Rotate r) = "Rotate by " ++ show r
+  show (Translate (V x y)) = "Translate by " ++ show x ++ " and " ++ show y
+
+instance Eq Transform where
+  (T (t:t1)) == (T (tt:t2)) = t == t && (T t1) == (T t2)
+  T [] == T [] = True
+  T [] == T t = False
 
 instance Show Transform where
-  show t = "Transform a point"
+  show (T (t:ts)) = show t ++ show (T ts)
+  show (T []) = ""
 
 -- przesunięcie o wektor
 translate :: Vec -> Transform
-translate (V x y) = T f where 
-  f (P x1 y1) = P (x + x1) (y + y1) 
+translate v = T [Translate v]
 
 
 -- obrót wokół punktu (0,0) przeciwnie do ruchu wskazówek zegara
 -- jednostki mozna sobie wybrać
 rotate :: R -> Transform
-rotate r = T f where
-  f p = rot r p
+rotate r = T [Rotate r]
   
 
 rot :: R -> Point -> Point
@@ -112,19 +123,36 @@ sinn x
 coss :: R -> R
 coss x = sinn(90 + x)
 
+checkIfSame :: TransformHelper -> TransformHelper -> Bool
+checkIfSame (Rotate r) (Rotate r1) = True
+checkIfSame (Translate v) (Translate v1) = True
+checkIfSame _ _ = False
+
+sumTranslations :: TransformHelper -> TransformHelper -> TransformHelper
+sumTranslations (Rotate r) (Rotate r1) = Rotate (r + r1)
+sumTranslations (Translate (V x y)) (Translate (V x1 y1)) = Translate (V (x + x1) (y + y1)) 
+
+combineTransforms :: [TransformHelper] -> [TransformHelper] -> [TransformHelper]
+combineTransforms trans@(t:ts) trans1@(t1:t1s) = case (t,t1) of
+  (Rotate r, Rotate r1) -> (reverse ts) ++ [Rotate (r1 + r)] ++ t1s
+  (Translate (V x y), Translate (V x1 y1)) -> (reverse ts) ++ [Translate (V (x + x1) (y + y1))] ++ t1s
+  (_, _) -> (reverse trans) ++ trans1
+combineTransforms t t1 = (reverse t) ++ t1
 
 instance Mon Transform where 
-  m1 = T blank
-  (><) (T t) (T t1) = T (t . t1)
+  m1 = T []
+  (><) (T t) (T t1) = T (combineTransforms (reverse t) t1)
   
 
 trpoint :: Transform -> Point -> Point
-trpoint (T t) p = t p
+trpoint (T t) p = foldr f p t where
+  f (Rotate r) p = rot r p
+  f (Translate (V x y)) (P x1 y1) = P (x + x1) (y + y1)
 
 
 trvec :: Transform -> Vec -> Vec
-trvec (T t) (V x y) = new_vector where
-  (P x1 y1) = t (P x y)
+trvec t (V x y) = new_vector where
+  (P x1 y1) = trpoint t (P x y)
   new_vector = V x1 y1
 
 

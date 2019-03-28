@@ -21,7 +21,7 @@ data MyState = S {
 }
 
 initialState :: MyState
-initialState = S [] Nothing Nothing [] (T blank) 0
+initialState = S [] Nothing Nothing [] (T [Translate (V 0 0)]) 0
 
 type ParseM a = ErrorT String(StateT MyState Identity) a
 
@@ -81,6 +81,9 @@ lineToM = do
   y <- pop
   x <- pop
   modify (drawLine x y)
+  -- state <- Control.Monad.State.get
+  -- let (Just (P x y)) = current_point state
+  -- throwError $ "current point = " ++ show x ++ " and " ++ show y ++ "\n"
 
 closePathM :: ParseM()
 closePathM = do
@@ -98,6 +101,7 @@ translateM :: ParseM()
 translateM = do
   y <- pop
   x <- pop
+  -- throwError $ "translate by " ++ show x ++ " and " ++ show y ++ "\n"
   modify(addTransformation $ translate (V x y))
 
 rotateM :: ParseM()
@@ -154,7 +158,7 @@ printError :: String
 printError = "300 400 translate\n\n/Courier findfont 24 scalefont setfont 0 0 moveto (Error) show\n\nstroke showpage\n"
 
 drawPicture :: [IntLine] -> String
-drawPicture x = "300 400 translate\n\n" ++ foldr f "" x ++ "\nstroke showpage\n" where 
+drawPicture p = "300 400 translate\n" ++ foldr f "" (reverse p) ++ "stroke showpage\n" where 
   f ((x, y), (x1, y1)) acc = show x ++ " " ++ show y ++ " moveto " ++ show x1 ++ " " ++ show y1 ++ " lineto\n" ++ acc
 
 main = do
