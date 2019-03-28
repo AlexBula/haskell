@@ -21,7 +21,7 @@ data MyState = S {
 }
 
 initialState :: MyState
-initialState = S [] Nothing Nothing [] (Translate (V 0 0)) 0
+initialState = S [] Nothing Nothing [] (T blank) 0
 
 type ParseM a = ErrorT String(StateT MyState Identity) a
 
@@ -52,7 +52,7 @@ divM = do
   y <- pop
   x <- pop
   if y == 0 then
-    throwError "/Courier findfont 24 scalefont setfont 0 0 moveto (Error) show"
+    throwError "Error: Division by 0"
   else
     push (x / y)
 
@@ -88,28 +88,28 @@ closePathM = do
   if (path_length state) >= 2 then
     let Just (P x y) = base_point state in modify (drawLine x y)
   else 
-    return ()
+    return()
 
 addTransformation :: Transform -> MyState -> MyState
 addTransformation t state = state {transformation = new_trans} where
-    new_trans = (><) t (transformation state)
+    new_trans = (><) (transformation state) t
 
 translateM :: ParseM()
 translateM = do
   y <- pop
   x <- pop
-  modify(addTransformation $ Translate (V x y))
+  modify(addTransformation $ translate (V x y))
 
 rotateM :: ParseM()
 rotateM = do
   x <- pop
-  modify(addTransformation $ Rotate x)
+  modify(addTransformation $ rotate x)
 
 addHead :: R -> MyState -> MyState
 addHead x state = state {stack = (x:xs)} where
   xs = stack state
 
-push :: R -> ParseM ()
+push :: R -> ParseM()
 push x = do 
   modify (addHead x)
 
@@ -122,7 +122,7 @@ pop = do
   state <- Control.Monad.State.get
   let s = stack state
   if s == [] then
-    throwError "/Courier findfont 24 scalefont setfont 0 0 moveto (Error) show"
+    throwError "Error: Stack underflow"
   else
     do
       let val = head s
@@ -144,16 +144,14 @@ parseInput (x:xs) = do
       "closepath" -> closePathM
       "translate" -> translateM
       "rotate" -> rotateM
-      _ -> throwError "/Courier findfont 24 scalefont setfont 0 0 moveto (Error) show"
+      _ -> throwError "Error: Unknown command"
   else
     push $ toRational $ fromJust v
   parseInput xs
-parseInput [] = return () 
-
+parseInput [] = return() 
 
 printError :: String
 printError = "300 400 translate\n\n/Courier findfont 24 scalefont setfont 0 0 moveto (Error) show\n\nstroke showpage\n"
-
 
 drawPicture :: [IntLine] -> String
 drawPicture x = "300 400 translate\n\n" ++ foldr f "" x ++ "\nstroke showpage\n" where 
