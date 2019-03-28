@@ -27,11 +27,9 @@ point (x, y) = P x y
 vec :: R2 -> Vec
 vec (x, y) = V x y
 
-
 instance Mon Vec where
   m1 = V 0 0
   (><) (V x y) (V x1 y1) = V (x+x1) (y+y1)
-
 
 data Picture = PP [(Point, Point)]
 
@@ -63,14 +61,6 @@ renderScaled c (PP p) = foldr f [] p where
     (((round $ (fromIntegral c)*x), (round $ (fromIntegral c)*y)), 
     ((round $ (fromIntegral c)*x1), (round $ (fromIntegral c)*y1))):acc
 
-
--- type TranFun = Point -> Point 
-
--- blank :: TranFun
--- blank = id
-
--- data Transform = T TranFun
-
 data TransformHelper = Rotate R | Translate Vec
 data Transform = T [TransformHelper]
 
@@ -96,13 +86,11 @@ instance Show Transform where
 translate :: Vec -> Transform
 translate v = T [Translate v]
 
-
 -- obrót wokół punktu (0,0) przeciwnie do ruchu wskazówek zegara
 -- jednostki mozna sobie wybrać
 rotate :: R -> Transform
 rotate r = T [Rotate r]
   
-
 rot :: R -> Point -> Point
 rot r = f where 
   f (P x y) = P (x * cosinus - y * sinus) (x * sinus + y * cosinus) where
@@ -111,7 +99,6 @@ rot r = f where
 
 fullCircle :: R -- wartość odpowiadająca 1 pełnemu obrotowi (360 stopni)
 fullCircle = 360
-
 
 sinn :: R -> R
 sinn x
@@ -122,11 +109,6 @@ sinn x
 
 coss :: R -> R
 coss x = sinn(90 + x)
-
-checkIfSame :: TransformHelper -> TransformHelper -> Bool
-checkIfSame (Rotate r) (Rotate r1) = True
-checkIfSame (Translate v) (Translate v1) = True
-checkIfSame _ _ = False
 
 sumTranslations :: TransformHelper -> TransformHelper -> TransformHelper
 sumTranslations (Rotate r) (Rotate r1) = Rotate (r + r1)
@@ -143,18 +125,15 @@ instance Mon Transform where
   m1 = T []
   (><) (T t) (T t1) = T (combineTransforms (reverse t) t1)
   
-
 trpoint :: Transform -> Point -> Point
 trpoint (T t) p = foldr f p t where
   f (Rotate r) p = rot r p
   f (Translate (V x y)) (P x1 y1) = P (x + x1) (y + y1)
 
-
 trvec :: Transform -> Vec -> Vec
 trvec t (V x y) = new_vector where
   (P x1 y1) = trpoint t (P x y)
   new_vector = V x1 y1
-
 
 transform :: Transform -> Picture -> Picture
 transform t (PP x) = PP (foldr f [] x) where
