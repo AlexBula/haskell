@@ -81,9 +81,6 @@ lineToM = do
   y <- pop
   x <- pop
   modify (drawLine x y)
-  -- state <- Control.Monad.State.get
-  -- let (Just (P x y)) = current_point state
-  -- throwError $ "current point = " ++ show x ++ " and " ++ show y ++ "\n"
 
 closePathM :: ParseM()
 closePathM = do
@@ -101,7 +98,6 @@ translateM :: ParseM()
 translateM = do
   y <- pop
   x <- pop
-  -- throwError $ "translate by " ++ show x ++ " and " ++ show y ++ "\n"
   modify(addTransformation $ translate (V x y))
 
 rotateM :: ParseM()
@@ -155,7 +151,7 @@ parseInput (x:xs) = do
 parseInput [] = return() 
 
 printError :: String
-printError = "300 400 translate\n\n/Courier findfont 24 scalefont setfont 0 0 moveto (Error) show\n\nstroke showpage\n"
+printError = "300 400 translate\n/Courier findfont 24 scalefont setfont 0 0 moveto (Error) show\nstroke showpage\n"
 
 drawPicture :: [IntLine] -> String
 drawPicture p = "300 400 translate\n" ++ foldr f "" (reverse p) ++ "stroke showpage\n" where 
