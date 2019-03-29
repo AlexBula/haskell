@@ -23,13 +23,12 @@ data MyState = S {
 initialState :: MyState
 initialState = S [] Nothing Nothing [] (T [Translate (V 0 0)]) 0
 
-type ParseM a = ErrorT String(StateT MyState Identity) a
+type ParseM = ErrorT String(StateT MyState Identity)
 
 runParseM :: MyState -> ParseM a -> (Either String a, MyState)
 runParseM st ev = runIdentity (runStateT (runErrorT ev) st) 
 
-
-addM :: ParseM ()
+addM :: ParseM()
 addM = do
   y <- pop
   x <- pop
@@ -76,17 +75,24 @@ drawLine x y state = state {picture = (new_line:pic),
   new_line = (fromJust (current_point state), new_point)
   incremented = (path_length state) + 1
 
+zeroPathLength :: MyState -> MyState
+zeroPathLength state = state {path_length = 0}
+
 lineToM :: ParseM()
 lineToM = do
   y <- pop
   x <- pop
-  modify (drawLine x y)
+  state <- Control.Monad.State.get
+  if (base_point state) == Nothing then
+    throwError "Error: Base point is not defined"
+  else
+    modify (drawLine x y)
 
 closePathM :: ParseM()
 closePathM = do
   state <- Control.Monad.State.get
   if (path_length state) >= 2 then
-    let Just (P x y) = base_point state in modify (drawLine x y)
+    let Just (P x y) = base_point state in modify(drawLine x y) >> modify(zeroPathLength)
   else 
     return()
 
