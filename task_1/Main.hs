@@ -1,5 +1,7 @@
 module Main(main) where 
 
+-- Author Aleksander Buła ab370738
+
 import System.Environment
 import Text.Read 
 import Control.Monad.Identity

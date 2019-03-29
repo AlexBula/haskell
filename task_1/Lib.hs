@@ -1,5 +1,7 @@
 module Lib where
 
+-- Author Aleksander Buła ab370738 
+  
 import Mon
 
 type R = Rational
