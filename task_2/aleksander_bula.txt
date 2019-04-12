@@ -1,0 +1,169 @@
+-- Aleksander Buła --
+-- ab370738 --
+
+----- Language description ------
+
+It is a imperative language based on Latte grammar. It is in a C like format.
+Functions are declared with word "fun"
+
+I will try to implement all functionalities for 20 points. But if there will be enough time after the May deadline I will add additional functionlities and try to reach 30 points.
+
+----- Example programs ------
+
+1.
+/* Simple function with one argumemnt */
+int a = 5;
+void (int) f; f = (int a) { return; };
+
+2.
+/* Return a function scaling ints by 5 */
+int (int) (int) f;
+int a = 5;
+f = fun (int a) { 
+int (int) scale_by;
+ff = fun (int b) { return b * a; };
+return ff;
+};
+
+3.
+/* While loop printing numbers from 1 to 10 */
+int x = 1;
+while (x <= 10) {
+show x;
+x++;
+};
+
+
+------ Gramatics -------
+
+
+-- programs ------------------------------------------------
+
+entrypoints Block ;
+
+-- statements ----------------------------------------------
+
+Block.     Block ::= [Stmt] ;
+
+separator  Stmt ";" ;
+
+Empty.     Stmt ::= "To Be Empty Or Not To Be Empty" ;
+
+BStmt.     Stmt ::= "{" Block "}" ;
+
+Decl.      Stmt ::= Type [Item] ;
+
+NoInit.    Item ::= Ident ; 
+
+Init.      Item ::= Ident "=" Expr ;
+
+separator nonempty Item "," ;
+
+-- variables
+
+Var.       Var ::= Type Ident ;
+
+separator Var "," ;
+
+-- operation on values ----------------------------------
+
+Ass.       Stmt ::= Ident "=" Expr ;
+
+Incr.      Stmt ::= Ident "++" ;
+
+Decr.      Stmt ::= Ident "--" ;
+
+Ret.       Stmt ::= "return" Expr ;
+
+VRet.      Stmt ::= "return" ;
+
+If.      Stmt ::= "if" "(" Expr ")"  "{" Block "}" ;
+
+IfElse.  Stmt ::= "if" "(" Expr ")" "{" Block "}" "else" "{" Block "}" ;
+
+While.     Stmt ::= "while" "(" Expr ")" "{" Block "}" ;
+
+-- Types ---------------------------------------------------
+
+RType.     Type ::= RegType ;
+
+FType.     Type ::= FunType;
+
+Int.       RegType ::= "int" ;
+
+Str.       RegType ::= "string" ;
+
+Bool.      RegType ::= "boolean" ;
+
+Void.      RegType ::= "void" ;
+
+Function.  FunType ::=  Type "(" [Type] ")" ;
+
+separator  Type "," ;
+
+-- expresions ----------------------------------------------
+
+EVar.      Expr6 ::= Ident ;
+
+EFun.      Expr6 ::= "fun" "(" [Var] ")" "{" Block "}" ;
+
+ELitInt.   Expr6 ::= Integer ;
+
+ELitTrue.  Expr6 ::= "true" ;
+
+ELitFalse. Expr6 ::= "false" ;
+
+EApp.      Expr6 ::= Ident "(" [Expr] ")" ;
+
+EString.   Expr6 ::= String ;
+
+Neg.       Expr5 ::= "-" Expr6 ;
+
+Not.       Expr5 ::= "!" Expr6 ;
+
+EMul.      Expr4 ::= Expr4 MulOp Expr5 ;
+
+EAdd.      Expr3 ::= Expr3 AddOp Expr4 ;
+
+ERel.      Expr2 ::= Expr2 RelOp Expr3 ;
+
+EAnd.      Expr1 ::= Expr2 "&&" Expr1 ;
+
+EOr.       Expr ::= Expr1 "||" Expr ;
+
+coercions  Expr 6 ;
+
+separator  Expr "," ;
+
+
+-- operators -----------------------------------------------
+
+Plus.      AddOp ::= "+" ;
+
+Minus.     AddOp ::= "-" ;
+
+Times.     MulOp ::= "*" ;
+
+Div.       MulOp ::= "/" ;
+
+Mod.       MulOp ::= "%" ;
+
+LTH.       RelOp ::= "<" ;
+
+LE.        RelOp ::= "<=" ;
+
+GTH.       RelOp ::= ">" ;
+
+GE.        RelOp ::= ">=" ;
+
+EQU.       RelOp ::= "==" ;
+
+NE.        RelOp ::= "!=" ;
+
+-- comments ------------------------------------------------
+
+comment    "//" ;
+
+comment    "/*" "*/" ;
+
+
