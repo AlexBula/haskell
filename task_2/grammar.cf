@@ -14,8 +14,6 @@ BStmt.     Stmt ::= "{" Block "}" ;
 
 Decl.      Stmt ::= Type [Item] ;
 
-NoInit.    Item ::= Ident ; 
-
 Init.      Item ::= Ident "=" Expr ;
 
 separator nonempty Item "," ;
@@ -38,6 +36,10 @@ Ret.       Stmt ::= "return" Expr ;
 
 VRet.      Stmt ::= "return" ;
 
+Brk.       Stmt ::= "break" ;
+
+Cont.      Stmt ::= "continue" ;
+
 If.      Stmt ::= "if" "(" Expr ")"  "{" Block "}" ;
 
 IfElse.  Stmt ::= "if" "(" Expr ")" "{" Block "}" "else" "{" Block "}" ;
@@ -48,7 +50,7 @@ While.     Stmt ::= "while" "(" Expr ")" "{" Block "}" ;
 
 RType.     Type ::= RegType ;
 
-FType.     Type ::= FunType;
+FType.     Type ::= FunType ;
 
 Int.       RegType ::= "int" ;
 
@@ -66,7 +68,9 @@ separator  Type "," ;
 
 EVar.      Expr6 ::= Ident ;
 
-EFun.      Expr6 ::= "fun" "(" [Var] ")" "{" Block "}" ;
+ECall.     Expr6 ::= Expr6 "(" [Expr] ")" ;   
+
+ELambda.   Expr6 ::= "fun" Type "(" [Var] ")" "{" Block "}" ;
 
 ELitInt.   Expr6 ::= Integer ;
 
