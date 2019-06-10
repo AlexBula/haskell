@@ -8,6 +8,14 @@ import Control.Monad.Identity
 import AbsGrammar
 
 
+data ReturnVal =
+  RetV Value
+  | NaN
+  | Brk
+  | Con
+  deriving (Show, Eq) 
+
+
 data Value = 
   VInt Integer 
   | VBool Bool 
@@ -104,17 +112,17 @@ evalExpr (ERel e opp e1) = do
     _ -> throwError "Comparision operators must be applied to either Ints, Booleans or Strings"
 
 
-evalStmt :: Stmt -> Inter()
+evalStmt :: Stmt -> Inter ReturnVal
 evalStmt (Empty) = do
-  return()
-evalStmt (BStmt (Block (x:xs))) = do
-  evalStmt x >> evalBlock (Block xs) 
+  return (NaN)
+evalStmt (BStmt (Block b)) = do
+  evalBlock (Block b) 
 evalStmt (Ass i@(Ident id) e) = do
   st <- Control.Monad.State.get
   v <- evalExpr e
   case Map.lookup i (env st) of
     Nothing -> throwError $ "Variable not in scope - " ++ id
-    Just l ->  modify(assignValue l v)
+    Just l ->  modify(assignValue l v) >> return NaN
 evalStmt (Incr i@(Ident id)) = do
   st <- Control.Monad.State.get
   let f x = VInt (x + 1) in incrOrDecr f i st
@@ -125,7 +133,7 @@ evalStmt (If cond s) = do
   b <- evalExpr cond
   case b of
     (VBool True) -> evalBlock s
-    (VBool False) -> return()
+    (VBool False) -> return NaN
     _ -> throwError "Conditon is not a boolean expression"
 evalStmt (IfElse cond s s1) = do
   b <- evalExpr cond
@@ -136,11 +144,15 @@ evalStmt (IfElse cond s s1) = do
 evalStmt (While cond s) = do
   b <- evalExpr cond
   case b of
-    (VBool True) -> evalBlock s >> evalStmt (While cond s)
-    (VBool False) -> return()
+    (VBool True) -> do
+      ret <- evalBlock s 
+      case ret of 
+        NaN -> evalStmt (While cond s)
+        RetV v -> return $ RetV v
+    (VBool False) -> return NaN
     _ -> throwError "Condition is not a boolean expression"
 evalStmt (Decl ttype []) = do
-  return()
+  return NaN
 evalStmt (Decl ttype (x:xs)) = do
   case ttype of
     (RType t) -> declSingleVar t x >> evalStmt (Decl ttype xs)
@@ -152,11 +164,11 @@ evalStmt (Prnt i@(Ident id)) = do
     Just l -> do
       let (Just v) = Map.lookup l (store st) 
         in modify(addToOutput v)
+      return NaN
 evalStmt (PrntLit e) = do
   v <- evalExpr e
-  modify(addToOutput v)
+  modify(addToOutput v) >> return NaN
 evalStmt (Call i@(Ident id) args) = do
-  return()
   st <- Control.Monad.State.get
   -- case e of
     -- (EVar i@(Ident id) -> do
@@ -164,19 +176,22 @@ evalStmt (Call i@(Ident id) args) = do
     Nothing -> throwError $ ("Function " ++ id ++ " does not exist")
     Just l -> do
       case Map.lookup l (store st) of
-        Just (VFun i vars body) -> applyArgs args vars (env st) >> evalBlock body 
-        -- >> modify(revertState st)
+        Just (VFun i vars body) -> applyArgs args vars (env st) >> evalBlock body >> modify(revertState st) >> return NaN
         _ -> throwError $ id ++ " is not a function"
     -- _ -> throwError "Not supported"
-evalStmt _ = throwError "Asa"
+evalStmt _ = throwError  "Not yet implemented"
   
 
-evalBlock :: Block -> Inter()
-evalBlock (Block []) = return()
-evalBlock (Block (x:xs)) = evalStmt x >> evalBlock (Block xs)
+evalBlock :: Block -> Inter ReturnVal
+evalBlock (Block []) = return NaN
+evalBlock (Block (x:xs)) = do
+  ret <- evalStmt x 
+  case ret of 
+    NaN -> evalBlock (Block xs)
+    RetV v -> return $ RetV v
 
 
-declSingleVar :: RegType -> Item -> Inter()
+declSingleVar :: RegType -> Item -> Inter ReturnVal
 declSingleVar t (Init i e) = do
   r <- evalExpr e
   st <- Control.Monad.State.get
@@ -186,8 +201,9 @@ declSingleVar t (Init i e) = do
       Nothing -> do 
         modify(addVar i)
         modify(assignValue loc r) 
+        return NaN
 
-declFun :: FunType -> Item -> Inter()
+declFun :: FunType -> Item -> Inter ReturnVal
 declFun (Function t args) (Init i e) = do
   st <- Control.Monad.State.get
   let loc = (Map.size (env st)) + 1 
@@ -198,16 +214,19 @@ declFun (Function t args) (Init i e) = do
           Nothing -> do
             modify(addVar i)
             modify(assignValue loc (VFun i vars body)) 
+            return NaN
             -- modify(addFun i loc vars body)
       _ -> throwError "Expresion is not a function"
 
-incrOrDecr :: (Integer -> Value) -> Ident -> MyState -> Inter()
+incrOrDecr :: (Integer -> Value) -> Ident -> MyState -> Inter ReturnVal
 incrOrDecr f i@(Ident id) st = do
   case Map.lookup i (env st) of
     Nothing -> throwError $ "Variable not in scope" ++ id
     Just l -> do 
       case getValue l (store st) of
-        (VInt x) -> let val = f x in modify(assignValue l val)
+        (VInt x) -> do 
+          let val = f x in modify(assignValue l val)
+          return NaN
         _ -> throwError "Increment operator can be use only with numerical types"
 
 cmp :: Ord a => a -> a -> RelOp -> Value
@@ -222,23 +241,18 @@ cmp x y opp = case opp of
 applyArgs :: [Expr] -> [Var] -> Env -> Inter()         
 applyArgs (a:as) ((Var t i):xs) env = do
   v <- evalExpr a
-  case Map.lookup i env of
-    Nothing -> do
-      let loc = (Map.size env + 1) 
-      modify(addVar i) >>  modify(assignValue loc v) >> applyArgs as xs env
-    _ -> throwError "Ambigious reference"
+  -- case Map.lookup i env of
+    -- Nothing -> do
+  let loc = (Map.size env + 1) 
+  modify(addVar i) >>  modify(assignValue loc v) >> applyArgs as xs env
+    -- _ -> throwError "Ambigious reference"
 applyArgs [] [] _ = return()
 applyArgs _ _ _ = throwError "Number of function arguments is incorrect"
 
 getValue :: Loc -> Store -> Value
 getValue l s = case Map.lookup l s of
   Nothing -> None
-  Just v -> v
-
--- addFun :: Ident -> Loc -> [Var] -> Block -> MyState -> MyState
--- addFun i l vars b state = state {store = new_map} where
---   new_map = Map.insert f l (store state)
---   f = VFun i vars b 
+  Just v -> v 
 
 addVar :: Ident -> MyState -> MyState
 addVar i state = state {env = new_env} where
@@ -258,4 +272,5 @@ addToOutput v state = state {output = es : (output state)} where
     (VString ss) -> show ss
 
 revertState :: MyState -> MyState -> MyState
-revertState old_state state = old_state
+revertState old_state f_state = new_state where
+  new_state = old_state {output = (output f_state)}
